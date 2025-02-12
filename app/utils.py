@@ -24,3 +24,21 @@ async def get_temperature(city: str) -> float:
         async with session.get(url) as response:
             data = await response.json()
             return data["main"]["temp"]  # Возвращаем температуру в градусах Цельсия
+
+
+async def get_calories(product_name):
+    url = f"https://world.openfoodfacts.org/cgi/search.pl?search_terms={product_name}&search_simple=1&json=1"
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            if response.status == 200:
+                data = await response.json()
+
+                # Проверка на наличие продуктов в ответе
+                if 'products' in data and data['products']:
+                    product = data['products'][0]  # Берём первый продукт из списка
+                    calories = product.get('nutriments', {}).get('energy-kcal', 'Неизвестно')
+                    return calories
+                return None
+            else:
+                return "Ошибка запроса. Пожалуйста, попробуйте позже."
