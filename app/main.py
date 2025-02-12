@@ -1,13 +1,14 @@
-import asyncio
 from aiogram import Bot, Dispatcher
+import asyncio
+from app.handlers import register_handlers
 from config import API_TOKEN
-from handlers import register_all_handlers
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
+register_handlers(dp)
+
 async def main():
-    register_all_handlers(dp)
     print("Бот запущен!")
     await dp.start_polling(bot)
 
