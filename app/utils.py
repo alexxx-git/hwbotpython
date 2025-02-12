@@ -5,7 +5,7 @@ def calculate_water_intake(weight, activity_minutes, hot_weather=False):
     water_intake = weight * 30  # Базовая норма
     water_intake += 500 * (activity_minutes / 30)  # За каждую 30-минутную активность
     if hot_weather:
-        water_intake += 1000  # Дополнительные 500 мл для жаркой погоды
+        water_intake += 1000  # Дополнительные 1000 мл для жаркой погоды
     return round(water_intake,0)
 
 def calculate_calories(weight, height, age, activity_level):
