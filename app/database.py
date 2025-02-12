@@ -155,7 +155,10 @@ async def get_progress(user_id):
         water_goal = profile['water_goal']  # Используем рассчитанную норму воды
 
         # Формируем сообщение о прогрессе
-        progress_message = f"Прогресс:\nВода: {water_consumed:.0f} мл из {water_goal:.0f} мл\nКалории: {calories_consumed} ккал из {profile['goal_calories']} ккал\nСожжено: {calories_burned} ккал"
+        progress_message = (f"Прогресс:\nВода: {water_consumed:.0f} мл из {water_goal:.0f} мл\n"
+                            f"Калории: {calories_consumed} ккал из {profile['goal_calories']} ккал\n"
+                            f"Сожжено: {calories_burned} ккал\n"
+                            f"Балланс: {round(calories_consumed - calories_burned,1)} ккал")
         return progress_message
     return "Профиль не найден."
 

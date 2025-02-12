@@ -32,36 +32,43 @@ class WorkoutState(StatesGroup):
     waiting_for_workout_type = State()  # Ожидание выбора типа тренировки
     waiting_for_workout_time = State()  # Ожидание времени тренировки
 
-# Расход калорий на минуту для различных типов тренировок
-workout_calories_per_minute = {
-    "Бег": 10,
-    "Быстрая ходьба": 5,
-    "Плавание": 8,
-    "Велосипед": 7,
-    "Скакалка": 13,
-    "Танцы": 7,
-    "Йога": 5,
-}
-# Функция для создания клавиатуры с кнопками
-def workout_keyboard():
-    # Создаём клавиатуру
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="Бег", callback_data="Бег"),
-             InlineKeyboardButton(text="Быстрая ходьба", callback_data="Быстрая ходьба")],
-            [InlineKeyboardButton(text="Плавание", callback_data="Плавание"),
-             InlineKeyboardButton(text="Велосипед", callback_data="Велосипед")],
-            [InlineKeyboardButton(text="Скакалка", callback_data="Скакалка"),
-             InlineKeyboardButton(text="Танцы", callback_data="Танцы")],
-            [InlineKeyboardButton(text="Йога", callback_data="Йога")]
-        ],
-        row_width=2  # Указываем, сколько кнопок в каждой строке
-    )
-    return keyboard
-
 @dp.message(Command("start"))
 async def cmd_start(message: Message):
     await message.reply("Привет! Я помогу вам следить за нормой воды и калорий. Начните с /set_profile.")
+
+
+
+# Список команд, которые есть в боте
+commands = [
+    ("/start", "Запустить бота"),
+    ("/help", "Помощь"),
+    ("/log_food", "ввести еду и количество"),
+    ("/log_water", "потребление воды в мл"),
+    ("/log_workout", "вид тренировки и время"),
+    ("/check_progress", "Проверить прогресс"),
+    ("/set_profile", "Настроить профиль")
+]
+
+# Клавиатура с командами
+def help_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=f"{cmd} - {desc}", callback_data=f"cmd_{cmd}")]
+            for cmd, desc in commands
+        ]
+    )
+
+# Хендлер для /help
+@dp.message(Command("help"))
+async def show_commands(message: types.Message):
+    await message.answer("Выберите команду:", reply_markup=help_keyboard())
+
+# Обработчик нажатий на кнопки в /help
+@dp.callback_query(lambda c: c.data.startswith("cmd_"))
+async def handle_help_commands(callback_query: types.CallbackQuery):
+    cmd = callback_query.data[4:]  # Убираем "cmd_" из callback_data
+    await callback_query.answer(f"Вы выбрали команду: {cmd}")
+    await callback_query.message.answer(f"Вы можете ввести {cmd} в чат.")
 
 
 @dp.message(Command("set_profile"))
@@ -253,7 +260,32 @@ async def log_food_amount(message: Message, state: FSMContext):
     except ValueError:
         await message.reply("Пожалуйста, введите корректное количество грамм (число).")
 
-
+# Расход калорий на минуту для различных типов тренировок
+workout_calories_per_minute = {
+    "Бег": 10,
+    "Быстрая ходьба": 5,
+    "Плавание": 8,
+    "Велосипед": 7,
+    "Скакалка": 13,
+    "Танцы": 7,
+    "Йога": 5,
+}
+# Функция для создания клавиатуры с кнопками
+def workout_keyboard():
+    # Создаём клавиатуру
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Бег", callback_data="Бег"),
+             InlineKeyboardButton(text="Быстрая ходьба", callback_data="Быстрая ходьба")],
+            [InlineKeyboardButton(text="Плавание", callback_data="Плавание"),
+             InlineKeyboardButton(text="Велосипед", callback_data="Велосипед")],
+            [InlineKeyboardButton(text="Скакалка", callback_data="Скакалка"),
+             InlineKeyboardButton(text="Танцы", callback_data="Танцы")],
+            [InlineKeyboardButton(text="Йога", callback_data="Йога")]
+        ],
+        row_width=2  # Указываем, сколько кнопок в каждой строке
+    )
+    return keyboard
 # Хендлер для команды /log_workout
 @dp.message(Command("log_workout"))
 async def log_workout_cmd(message: types.Message, state: FSMContext):
@@ -265,7 +297,7 @@ async def log_workout_cmd(message: types.Message, state: FSMContext):
 
 
 # Обработка нажатия на кнопку выбора тренировки
-@dp.callback_query()
+@dp.callback_query(lambda c: c.data in workout_calories_per_minute.keys())
 async def handle_workout_selection(callback_query: types.CallbackQuery, state: FSMContext):
     workout_type = callback_query.data  # Тип тренировки из callback_data
     await callback_query.answer(f"Вы выбрали: {workout_type}")
