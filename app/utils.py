@@ -1,4 +1,3 @@
-import requests
 from config import OPENWEATHER_API_KEY
 import aiohttp
 

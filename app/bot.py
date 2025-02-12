@@ -1,8 +1,8 @@
 import asyncio
 import aiohttp
 import aiosqlite
-from aiogram import Bot, Dispatcher
-from aiogram.types import Message
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.filters import Command
 from aiogram.filters.state import StateFilter
 from aiogram.fsm.context import FSMContext
@@ -28,7 +28,36 @@ class FoodState(StatesGroup):
     waiting_for_calories = State()
     waiting_for_grams = State()
 
+class WorkoutState(StatesGroup):
+    waiting_for_workout_type = State()  # Ожидание выбора типа тренировки
+    waiting_for_workout_time = State()  # Ожидание времени тренировки
 
+# Расход калорий на минуту для различных типов тренировок
+workout_calories_per_minute = {
+    "Бег": 10,
+    "Быстрая ходьба": 5,
+    "Плавание": 8,
+    "Велосипед": 7,
+    "Скакалка": 13,
+    "Танцы": 7,
+    "Йога": 5,
+}
+# Функция для создания клавиатуры с кнопками
+def workout_keyboard():
+    # Создаём клавиатуру
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Бег", callback_data="Бег"),
+             InlineKeyboardButton(text="Быстрая ходьба", callback_data="Быстрая ходьба")],
+            [InlineKeyboardButton(text="Плавание", callback_data="Плавание"),
+             InlineKeyboardButton(text="Велосипед", callback_data="Велосипед")],
+            [InlineKeyboardButton(text="Скакалка", callback_data="Скакалка"),
+             InlineKeyboardButton(text="Танцы", callback_data="Танцы")],
+            [InlineKeyboardButton(text="Йога", callback_data="Йога")]
+        ],
+        row_width=2  # Указываем, сколько кнопок в каждой строке
+    )
+    return keyboard
 
 @dp.message(Command("start"))
 async def cmd_start(message: Message):
@@ -179,7 +208,6 @@ async def log_food_cmd(message: Message, state: FSMContext):
         await state.set_state(FoodState.waiting_for_grams.state)
         await state.update_data(food_name=food_name, calories_per_100g=calories_per_100g)
 # Обработчик для ввода калорийности
-# Обработчик для ввода калорийности
 @dp.message(StateFilter(FoodState.waiting_for_calories))
 async def log_food_calories(message: Message, state: FSMContext):
     try:
@@ -198,8 +226,6 @@ async def log_food_calories(message: Message, state: FSMContext):
 
     except ValueError:
         await message.reply("Пожалуйста, укажите корректную калорийность (число).")
-
-# Обработчик для ввода граммов
 # Обработчик для ввода граммов
 @dp.message(StateFilter(FoodState.waiting_for_grams))
 async def log_food_amount(message: Message, state: FSMContext):
@@ -227,15 +253,59 @@ async def log_food_amount(message: Message, state: FSMContext):
     except ValueError:
         await message.reply("Пожалуйста, введите корректное количество грамм (число).")
 
-@dp.message(Command("log_workout"))
-async def log_workout_cmd(message: Message):
-    workout_data = message.text.split()[1:]
-    workout_type = workout_data[0]
-    workout_time = int(workout_data[1])
-    calories_burned = workout_time * 10
-    await log_workout(message.from_user.id, workout_type, workout_time, calories_burned)
-    await message.reply(f"Записано: {workout_type} {workout_time} минут — {calories_burned} ккал.")
 
+# Хендлер для команды /log_workout
+@dp.message(Command("log_workout"))
+async def log_workout_cmd(message: types.Message, state: FSMContext):
+    # Отправляем клавиатуру с кнопками
+    await message.reply("Выберите тип тренировки:", reply_markup=workout_keyboard())
+
+    # Переходим к состоянию выбора тренировки
+    await state.set_state(WorkoutState.waiting_for_workout_type)
+
+
+# Обработка нажатия на кнопку выбора тренировки
+@dp.callback_query()
+async def handle_workout_selection(callback_query: types.CallbackQuery, state: FSMContext):
+    workout_type = callback_query.data  # Тип тренировки из callback_data
+    await callback_query.answer(f"Вы выбрали: {workout_type}")
+
+    # Сохраняем тип тренировки в состоянии пользователя
+    await state.update_data(workout_type=workout_type)
+
+    # Запрашиваем у пользователя время тренировки
+    await callback_query.message.reply(f"Сколько минут вы занимались {workout_type}?")
+
+    # Переходим к состоянию для ввода времени тренировки
+    await state.set_state(WorkoutState.waiting_for_workout_time)  # Теперь используем set_state()
+
+
+# Хендлер для ввода времени тренировки и логирования
+@dp.message(WorkoutState.waiting_for_workout_time)
+async def handle_workout_time(message: types.Message, state: FSMContext):
+    try:
+        # Получаем время тренировки от пользователя
+        workout_time = int(message.text)
+
+        # Получаем тип тренировки из состояния
+        data = await state.get_data()
+        workout_type = data['workout_type']
+
+        # Получаем калории для выбранной тренировки
+        calories_per_minute = workout_calories_per_minute.get(workout_type, 0)
+        calories_burned = workout_time * calories_per_minute
+
+        # Логируем тренировку
+        await log_workout(message.from_user.id, workout_type, workout_time, calories_burned)
+
+        # Отправляем сообщение пользователю
+        await message.reply(f"Записано: {workout_type} {workout_time} минут — {calories_burned} ккал.")
+
+        # Завершаем процесс
+        await state.clear()  # Завершаем состояние
+
+    except ValueError:
+        await message.reply("Пожалуйста, введите корректное время тренировки (в минутах).")
 
 async def main():
     await create_tables()

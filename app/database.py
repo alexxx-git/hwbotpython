@@ -1,8 +1,5 @@
 import aiosqlite
-
-# Подключение к базе данных
-DB_NAME = "bot_database.db"
-
+from config import DB_NAME
 # Подключение к базе данных
 async def db_connect():
     return await aiosqlite.connect(DB_NAME)
@@ -36,7 +33,7 @@ async def create_tables():
         activity INTEGER,
         city TEXT,
         goal_calories REAL,
-        water_goal REAL DEFAULT 0  -- Норма воды
+        water_goal REAL DEFAULT 0  
     )
     ''')
     await execute_query('''
