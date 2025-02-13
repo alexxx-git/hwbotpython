@@ -36,7 +36,7 @@ async def get_calories(product_name):
                 # Проверка на наличие продуктов в ответе
                 if 'products' in data and data['products']:
                     product = data['products'][0]  # Берём первый продукт из списка
-                    calories = product.get('nutriments', {}).get('energy-kcal', 'Неизвестно')
+                    calories = product.get('nutriments', {}).get('energy-kcal', None)
                     return calories
                 return None
             else:
