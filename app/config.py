@@ -1,8 +1,8 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
-# Конфигурационные параметры
-API_TOKEN = '7943234040:AAG6JwJ9_HGiKNe9yEW85IiuN8xHim_7NpM'  # Токен Telegram бота
-OPENWEATHER_API_KEY = '59311629c7bd1093f61e57e247f58a47'  # Ключ API для OpenWeather
-DB_NAME = "bot_database.db"
-
-NUTRITION_API_KEY = '77f34fd274a7d4a6820f787a065f34cc'
+API_TOKEN = os.getenv('API_TOKEN')  # Токен Telegram бота
+OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY')  # Ключ API для OpenWeather
+DB_NAME = os.getenv('DB_NAME')
+NUTRITION_API_KEY = os.getenv('NUTRITION_API_KEY')
