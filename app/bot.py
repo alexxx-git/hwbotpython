@@ -12,6 +12,7 @@ from database import get_profile, get_water_log
 from config import API_TOKEN
 from utils import calculate_water_intake, calculate_calories, get_temperature, get_calories
 from database import set_profile, get_progress, log_water, log_food, log_workout
+
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
@@ -31,6 +32,7 @@ class FoodState(StatesGroup):
 class WorkoutState(StatesGroup):
     waiting_for_workout_type = State()  # Ожидание выбора типа тренировки
     waiting_for_workout_time = State()  # Ожидание времени тренировки
+
 
 @dp.message(Command("start"))
 async def cmd_start(message: Message):
@@ -65,12 +67,29 @@ async def show_commands(message: types.Message):
 
 # Обработчик нажатий на кнопки в /help
 @dp.callback_query(lambda c: c.data.startswith("cmd_"))
-async def handle_help_commands(callback_query: types.CallbackQuery):
+async def handle_help_commands(callback_query: types.CallbackQuery, state: FSMContext):
     cmd = callback_query.data[4:]  # Убираем "cmd_" из callback_data
-    await callback_query.answer(f"Вы выбрали команду: {cmd}")
-    await callback_query.message.answer(f"Вы можете ввести {cmd} в чат.")
 
-
+    # Проверяем, нужна ли команда для копирования в буфер
+    if cmd in ["/log_food", "/log_water", "/log_workout"]:
+        # Если команда для ввода данных, отправляем её в текстовом формате
+        await callback_query.answer(f"Команда для использования: {cmd}")
+        await callback_query.message.answer(f"Скопируйте команду: {cmd} и вставьте в чат.")
+    else:
+        # Для остальных команд выполняем их действия сразу
+        await callback_query.answer(f"Вы выбрали команду: {cmd}")
+        # Здесь можно добавить логику для выполнения команд
+        if cmd == "/start":
+            await callback_query.message.answer("Привет! Я помогу вам следить за нормой воды и калорий. Начните с /help  и заполнения профиля /set_profile.")
+        elif cmd == "/check_progress":
+            user_id = callback_query.from_user.id
+            progress = await get_progress(user_id)
+            await callback_query.message.answer(progress)
+        elif cmd == "/set_profile":
+            await callback_query.message.answer("Введите ваш вес (в кг):")
+            await state.set_state(ProfileForm.weight)  # Переход к состоянию ввода веса
+        elif cmd == "/help":
+            await callback_query.message.answer("Выберите команду:", reply_markup=help_keyboard())
 @dp.message(Command("set_profile"))
 async def cmd_set_profile(message: Message, state: FSMContext):
     await message.reply("Введите ваш вес (в кг):")
@@ -139,9 +158,9 @@ async def process_city(message: Message, state: FSMContext):
 
 @dp.message(Command("check_progress"))
 async def check_progress(message: Message):
-    progress = await get_progress(message.from_user.id)
+    user_id = message.from_user.id
+    progress = await get_progress(user_id)
     await message.reply(progress)
-
 
 @dp.message(Command("log_water"))
 async def log_water_cmd(message: Message):
